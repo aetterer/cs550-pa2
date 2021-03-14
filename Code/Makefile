@@ -8,15 +8,15 @@ OBJ_DIR := obj
 INC_DIR := inc
 
 PN_BIN  := $(BIN_DIR)/peer_node
-IS_BIN  := $(BIN_DIR)/indexing_server
+IS_BIN  := $(BIN_DIR)/index_server
 
-PN_SRC  := $(SRC_DIR)/peer_node.c $(SRC_DIR)/client_server.c
-IS_SRC  := $(SRC_DIR)/indexing_server.c $(SRC_DIR)/client_server.c
-#SH_SRC  := $(SRC_DIR)/client_server.c
+PN_SRC  := $(SRC_DIR)/peer_node.c $(SRC_DIR)/client_server.c $(SRC_DIR)/read_config.c
+IS_SRC  := $(SRC_DIR)/index_server.c $(SRC_DIR)/client_server.c $(SRC_DIR)/read_config.c $(SRC_DIR)/thread_queue.c
+#SH_SRC  := $(SRC_DIR)/shared.c
 
-PN_OBJS := $(OBJ_DIR)/peer_node.o $(OBJ_DIR)/client_server.o
-IS_OBJS := $(OBJ_DIR)/indexing_server.o $(OBJ_DIR)/client_server.o
-#SH_OBJS := $(OBJ_DIR)/client_server.o
+PN_OBJS := $(OBJ_DIR)/peer_node.o $(OBJ_DIR)/client_server.o $(OBJ_DIR)/read_config.o
+IS_OBJS := $(OBJ_DIR)/index_server.o $(OBJ_DIR)/client_server.o $(OBJ_DIR)/read_config.o $(OBJ_DIR)/thread_queue.o
+#SH_OBJS := $(OBJ_DIR)/shared.o
 
 CPPFLAGS := -I$(INC_DIR)
 CFLAGS   := -g -Wall
