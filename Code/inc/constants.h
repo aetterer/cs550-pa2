@@ -6,5 +6,8 @@
 #define MAX_WD_LEN 24
 #define MSG_STAT_LEN 4
 #define MSG_LEN_LEN 4
-
+#define UID_LEN (24 + 1 + 12)
+#define MAX_FN_LEN 128
+#define OK 0
+#define ERR 1
 #endif

@@ -1,7 +1,8 @@
 #include "common.h"
-#include "client_server.h"
+#include "network.h"
 #include "read_config.h"
 #include "thread_queue.h"
+#include "hash_tables.h"
 #include "constants.h"
 
 // MACROS ------------------------------------------------------------------ //
@@ -14,15 +15,21 @@ pthread_t thread_pool[MAX_CLIENTS];
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
 
-struct client_info {
-    char ip_addr[MAX_IP_LEN];
-    char port[MAX_PORT_LEN];
-};
+//struct client_info {
+//    char ip_addr[MAX_IP_LEN];
+//    char port[MAX_PORT_LEN];
+//};
+
+//struct list_node {
+//    char *filename;
+//    struct client_info client;
+//};
 
 // FUNCTION PROTOTYPES ----------------------------------------------------- //
 void * thread_function(void *);
 void * handle_connection(void *);
 void register_client(int);
+void client_to_uid(char *, int, char *);
 
 // FUNCTIONS --------------------------------------------------------------- //
 int main(int argc, char **argv) {
@@ -40,6 +47,8 @@ int main(int argc, char **argv) {
 
     // Set up list of clients.
     //struct client_info *clients = (struct client_info *)malloc(MAX_CLIENTS * sizeof clients);
+    init_client_ht();
+    init_file_ht();
 
     // Initialize the node as a server.
     listener_socket = init_server(port, BACKLOG);
@@ -112,16 +121,71 @@ void * handle_connection(void *pclient) {
 // register_client() function
 //
 void register_client(int client_socket) {
+    // Get the IP address and port number of the client;
     struct sockaddr_in addr;
     socklen_t len = sizeof addr;
     getpeername(client_socket, (struct sockaddr *)&addr, &len);
     char *ip = inet_ntoa(addr.sin_addr);
     int port = ntohs(addr.sin_port);
+    char uid[UID_LEN];
+    client_to_uid(ip, port, uid);
 
-    printf("registering client %s:%d\n", ip, port);
 
+    // Get the number of files the client has.
+    char *num_files_str = NULL;
+    num_files_str = recv_packet(client_socket);
+    int num_files = atoi(num_files_str);
+    free(num_files_str);
+    printf("%d files\n", num_files);
+
+    // Create a client_info struct.
+    struct client_info *c = malloc(sizeof (struct client_info));
+    strncpy(c->uid, uid, UID_LEN);
+    c->num_files = num_files;
+    c->files = malloc(num_files * sizeof (char *));
+
+    // Add the files to the client_info struct.
+    char *filename = NULL;
+    for (int i = 0; i < num_files; i++) {
+        filename = recv_packet(client_socket);
+        strncpy(c->files[i], filename, MAX_FN_LEN);
+        struct file_info *f = malloc(sizeof (struct file_info));
+        strncpy(f->filename, filename, MAX_FN_LEN);
+        file_ht_insert(f);
+        printf("<%s>\n", filename);
+    }
+
+    client_ht_insert(c);
+    //print_client_ht();
+    //print_file_ht();
+
+    /*
     printf("files list:\n");
     char *file_list = NULL;
     file_list = recv_packet(client_socket);
-    printf("%s\n", file_list);
+
+    char *token;
+    token = strtok(file_list, "\n");
+    while (token != NULL) {
+        // TO-DO: add file to list of files
+        //struct file_info *f = (struct file_info *)malloc(sizeof (struct file_info));
+        //strncpy(f->filename, token, MAX_FN_LEN);
+        //file_ht_insert(f);
+        printf("%s\n", token);
+        token = strtok(NULL, "\n");
+    }
+    //print_file_ht();
+    */
 }
+
+// client_to_uid() function
+//
+void client_to_uid(char *ip, int port, char *buf) {
+    char port_str[12];
+    sprintf(port_str, "%d", port);
+    strncpy(buf, ip, MAX_IP_LEN);
+    strncat(buf, ":", 1);
+    strncat(buf, port_str, 12);
+}
+
+

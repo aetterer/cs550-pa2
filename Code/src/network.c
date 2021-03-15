@@ -5,7 +5,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include "client_server.h"
+#include "network.h"
 #include "constants.h"
 
 // ------------------------------------------------------------------------- //
@@ -122,12 +122,14 @@ int recv_all(int socket, char *buf, int len) {
 
 // ------------------------------------------------------------------------- //
 char * recv_packet(int socket) {
+    printf("\t### recv_packet() debug ###\n");
     // First, handle the status.
     char stat_as_bytes[MSG_STAT_LEN];
     recv_all(socket, stat_as_bytes, MSG_STAT_LEN);
     int stat;
     memcpy(&stat, (int *)stat_as_bytes, MSG_STAT_LEN);
     stat = ntohl(stat);
+    printf("\tmsg stat: %d\n", stat);
 
     // Then handle the length of the message.
     char len_as_bytes[MSG_LEN_LEN];
@@ -135,10 +137,14 @@ char * recv_packet(int socket) {
     int len;
     memcpy(&len, (int *)len_as_bytes, MSG_LEN_LEN);
     len = ntohl(len);
+    printf("\tmsg len: %d\n", len);
 
     // Finally, receive the message.
     char *msg = (char *)malloc(len * sizeof (char));
+    memset(msg, 0, len);
     recv_all(socket, msg, len);
+    printf("\tmsg: %s\n", msg);
+    printf("\t###########################\n");
     return msg;
 }
 

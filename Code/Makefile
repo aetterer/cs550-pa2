@@ -10,12 +10,12 @@ INC_DIR := inc
 PN_BIN  := $(BIN_DIR)/peer_node
 IS_BIN  := $(BIN_DIR)/index_server
 
-PN_SRC  := $(SRC_DIR)/peer_node.c $(SRC_DIR)/client_server.c $(SRC_DIR)/read_config.c
-IS_SRC  := $(SRC_DIR)/index_server.c $(SRC_DIR)/client_server.c $(SRC_DIR)/read_config.c $(SRC_DIR)/thread_queue.c
+PN_SRC  := $(SRC_DIR)/peer_node.c $(SRC_DIR)/network.c $(SRC_DIR)/read_config.c
+IS_SRC  := $(SRC_DIR)/index_server.c $(SRC_DIR)/network.c $(SRC_DIR)/read_config.c $(SRC_DIR)/thread_queue.c $(SRC_DIR)/hash_tables.c
 #SH_SRC  := $(SRC_DIR)/shared.c
 
-PN_OBJS := $(OBJ_DIR)/peer_node.o $(OBJ_DIR)/client_server.o $(OBJ_DIR)/read_config.o
-IS_OBJS := $(OBJ_DIR)/index_server.o $(OBJ_DIR)/client_server.o $(OBJ_DIR)/read_config.o $(OBJ_DIR)/thread_queue.o
+PN_OBJS := $(OBJ_DIR)/peer_node.o $(OBJ_DIR)/network.o $(OBJ_DIR)/read_config.o
+IS_OBJS := $(OBJ_DIR)/index_server.o $(OBJ_DIR)/network.o $(OBJ_DIR)/read_config.o $(OBJ_DIR)/thread_queue.o $(OBJ_DIR)/hash_tables.o
 #SH_OBJS := $(OBJ_DIR)/shared.o
 
 CPPFLAGS := -I$(INC_DIR)
