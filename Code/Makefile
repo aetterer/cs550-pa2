@@ -19,7 +19,7 @@ IS_OBJS := $(OBJ_DIR)/index_server.o $(OBJ_DIR)/network.o $(OBJ_DIR)/read_config
 #SH_OBJS := $(OBJ_DIR)/shared.o
 
 CPPFLAGS := -I$(INC_DIR)
-CFLAGS   := -g -Wall
+CFLAGS   := -g -Wall -pthread
 
 .PHONY: all clean
 
