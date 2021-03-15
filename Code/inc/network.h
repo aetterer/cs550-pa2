@@ -12,5 +12,6 @@ int send_all(int, char *, int);
 void send_packet(int, int, int, char *);
 int recv_all(int, char *, int);
 char * recv_packet(int);
+void trimnl(char *);
 
 #endif

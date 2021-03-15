@@ -112,18 +112,31 @@ void * thread_function(void *arg) {
 void * handle_connection(void *pclient) {
     int client_socket = *(int *)pclient;
     free(pclient);
-    printf("handling connection for %d\n", client_socket);
+
+    // Get information of Client.
+    struct sockaddr_in addr;
+    socklen_t addr_len = sizeof (addr);
+    getpeername(client_socket, (struct sockaddr *)&addr, &addr_len);
+    char *ip = inet_ntoa(addr.sin_addr);
+    int port = ntohs(addr.sin_port);
+    printf("handling connection for %s (%d)\n", ip, port);
 
     register_client(client_socket);
 
     char *fn = NULL;
     fn = recv_packet(client_socket);
+    trimnl(fn);
     fflush(stdout);
     printf("%s\n", fn);
 
     struct file_info *f = get_file_ht_entry(fn);
     char uid[UID_LEN];
-    strncpy(uid, f->uids[0], UID_LEN);
+    if (f == NULL) {
+        char *errmsg = "File does not exist";
+        strncpy(uid, errmsg, strnlen(errmsg, UID_LEN));
+    } else {
+        strncpy(uid, f->uids[0], UID_LEN);
+    }
 
     send_packet(client_socket, OK, UID_LEN, uid);
 

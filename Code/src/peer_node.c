@@ -36,11 +36,17 @@ int main(int argc, char **argv) {
     int index_socket = init_client(argv[2], argv[3]);
     printf("client: connected to %d\n", index_socket);
 
+    
+
+
+
+
     register_with_index(index_socket, port_str);
 
-    printf("sending filename\n");
-    char fn[10] = "file1";
-    send_packet(index_socket, OK, 10, fn);
+    printf("select a file >");
+    char fn[MAX_FN_LEN];
+    fgets(fn, MAX_FN_LEN, stdin);
+    send_packet(index_socket, OK, MAX_FN_LEN, fn);
 
     char *uid = recv_packet(index_socket);
     printf("file is at %s\n", uid);
@@ -60,7 +66,7 @@ void register_with_index(int index_socket, char *port_str) {
     //char port_str[MAX_PORT_LEN];
     //sprintf(port_str, "%d", port);
     send_packet(index_socket, OK, 12, port_str);
-
+ 
     // We start by calling `ls' and reading the results into a buffer.
     FILE *ls = popen("ls", "r");
     char buf[4096];
@@ -93,7 +99,7 @@ void register_with_index(int index_socket, char *port_str) {
 }
 
 // ------------------------------------------------------------------------- //
-// client_to_uid(0 function
+// client_to_uid() function
 //
 void client_to_uid(char *ip, int port, char *uid) {
     char port_str[12];
