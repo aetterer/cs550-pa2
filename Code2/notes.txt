@@ -1,0 +1,13 @@
+Node's get their own port number and directory from config file, and get the
+ip and port number of the indexing server from the command line
+
+download <file> command 
+    * node sends request to index server for list of nodes that have the file
+    * index server returns all nodes
+    * node randomly selects a node
+    * node connects to chosen node and requests file
+    * chosen node sends file
+    * node sends notice to index server to update list
+
+
+
