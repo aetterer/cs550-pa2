@@ -171,7 +171,7 @@ void * handle_connection(void *pclient) {
             strncpy(f->uids[f->num_hosts], uid, UID_LEN);
             f->num_hosts = f->num_hosts + 1;
 
-            print_file_ht();
+            //print_file_ht();
         }
 
         // Handle quit command --------------------------------------------- //

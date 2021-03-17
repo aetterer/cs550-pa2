@@ -75,13 +75,13 @@ int main(int argc, char **argv) {
             //sprintf(logmsg, "Server: Received connection from %s:%d", client_ip, client_port);
             //write_to_log("Server: received connection.");
             
-            pthread_mutex_lock(&mutex);
-            FILE *fp = fopen(logfile, "a");
-            char l[100] = "Server: what the actually fuck\n";
+            //pthread_mutex_lock(&mutex);
+            //FILE *fp = fopen(logfile, "a");
+            //char l[100] = "Server: what the actually fuck\n";
             //fprintf(fp, "Server: received connection\n");
-            fwrite(l, 100, 1, fp);
-            fclose(fp);
-            pthread_mutex_unlock(&mutex);
+            //fwrite(l, 100, 1, fp);
+            //fclose(fp);
+            //pthread_mutex_unlock(&mutex);
 
             int *pclient = malloc(sizeof (int));
             *pclient = client_socket;
@@ -112,8 +112,6 @@ int main(int argc, char **argv) {
         // Get the command part of the command 
         char cmd_1[MAX_CMD_LEN];
         cmd_dequeue(cmd_1);
-
-        printf("dequeued %s\n", cmd_1);
 
         if (strncmp(cmd_1, "list", MAX_CMD_LEN) != 0 &&
             strncmp(cmd_1, "download", MAX_CMD_LEN) != 0 &&
@@ -303,7 +301,6 @@ void register_with_index(int index_socket, char *port) {
     char *token;
     token = strtok(buf, "\n");
     while (token != NULL) {
-        printf("Sending %s\n", token);
         send_stat(index_socket, OK);                 //
         send_len(index_socket, MAX_FN_LEN);          //
         send_msg(index_socket, token, MAX_FN_LEN);   // ---------------- SEND C
