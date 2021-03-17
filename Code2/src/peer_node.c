@@ -14,15 +14,14 @@
 pthread_t thread_pool[MAX_CLIENTS];
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
-char logfile[MAX_WD_LEN];
-char wd[MAX_WD_LEN];
+//char logfile[MAX_WD_LEN];
 
 // FUNCTION PROTOTYPES ----------------------------------------------------- //
 void register_with_index(int, char *);
 void client_to_uid(char *, int, char *);
 void * thread_function(void *);
 void * handle_connection(void *);
-void write_to_log(char *);
+//void write_to_log(char *);
 
 // ------------------------------------------------------------------------- //
 // main() function
@@ -30,14 +29,15 @@ void write_to_log(char *);
 int main(int argc, char **argv) {
     // Get parameters from config file.
     char port_str[MAX_PORT_LEN];
+    char wd[MAX_WD_LEN];
 
     if (argc != 4) {
         printf("%s\n", USAGE);
         exit(1);
     }
 
-    read_config(argv[1], NULL, port_str, wd, logfile);
-    printf("log file: %s\n", logfile);
+    read_config(argv[1], NULL, port_str, wd, NULL);
+    //printf("log file: %s\n", logfile);
 
 
     // Change the directory.
@@ -65,15 +65,15 @@ int main(int argc, char **argv) {
             client_socket = accept(listener_socket, NULL, NULL);
         
             // Get the client's info.
-            struct sockaddr_in addr;
-            socklen_t addr_len = sizeof addr;
-            getpeername(client_socket, (struct sockaddr *)&addr, &addr_len);
-            char *client_ip = inet_ntoa(addr.sin_addr);
-            int client_port = ntohs(addr.sin_port);
+            //struct sockaddr_in addr;
+            //socklen_t addr_len = sizeof addr;
+            //getpeername(client_socket, (struct sockaddr *)&addr, &addr_len);
+            //char *client_ip = inet_ntoa(addr.sin_addr);
+            //int client_port = ntohs(addr.sin_port);
             
-            char *logmsg = NULL;
-            sprintf(logmsg, "Server: Received connection from %s:%d", client_ip, client_port);
-            write_to_log(logmsg);
+            //char *logmsg = NULL;
+            //sprintf(logmsg, "Server: Received connection from %s:%d", client_ip, client_port);
+            //write_to_log(logmsg);
 
             int *pclient = malloc(sizeof (int));
             *pclient = client_socket;
@@ -342,28 +342,28 @@ void * handle_connection(void *pclient) {
     free(f_buf);
 
     // Get the client's info.
-    struct sockaddr_in addr;
-    socklen_t addr_len = sizeof addr;
-    getpeername(client_socket, (struct sockaddr *)&addr, &addr_len);
-    char *client_ip = inet_ntoa(addr.sin_addr);
-    int client_port = ntohs(addr.sin_port);
+    //struct sockaddr_in addr;
+    //socklen_t addr_len = sizeof addr;
+    //getpeername(client_socket, (struct sockaddr *)&addr, &addr_len);
+    //char *client_ip = inet_ntoa(addr.sin_addr);
+    //int client_port = ntohs(addr.sin_port);
 
-    char *logmsg = NULL;
-    sprintf(logmsg, "Server: Received download request for %s from %s:%d", 
-            filename, client_ip, client_port);
-    write_to_log(logmsg);
+    //char *logmsg = NULL;
+    //sprintf(logmsg, "Server: Received download request for %s from %s:%d", 
+    //        filename, client_ip, client_port);
+    //write_to_log(logmsg);
 
     return NULL;
 }
 
 // ------------------------------------------------------------------------- //
-void write_to_log(char *str) {
-    chdir("../../");
-    FILE *fp = fopen(logfile, "a");
-    fprintf(fp, "%s\n", str);
-    fclose(fp);
-    chdir(wd);
-}
+//void write_to_log(char *str) {
+//    chdir("../../");
+//    FILE *fp = fopen(logfile, "a");
+//    fprintf(fp, "%s\n", str);
+//    fclose(fp);
+//    chdir(wd);
+//}
 
 /*
 // ------------------------------------------------------------------------- //
