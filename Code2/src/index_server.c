@@ -17,7 +17,7 @@ pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
 // FUNCTION PROTOTYPES ----------------------------------------------------- //
 void * thread_function(void *);
 void * handle_connection(void *);
-void register_client(int);
+void register_client(int, char *);
 void client_to_uid(char *, char *, char *);
 
 // FUNCTIONS --------------------------------------------------------------- //
@@ -32,11 +32,12 @@ int main(int argc, char **argv) {
     }
 
     // Get server parameters from config file.
-    read_config(argv[1], NULL, port, wd);
+    read_config(argv[1], NULL, port, wd, NULL);
 
     // Set up list of clients
     init_client_ht();
     init_file_ht();
+    //thread_queue_t *tq = new_thread_queue();
 
     // Initialize the node as a server.
     listener_socket = init_server(port, BACKLOG);
@@ -58,7 +59,7 @@ int main(int argc, char **argv) {
 
         // Enqueue the client socket so a thread can start handling the connection.
         pthread_mutex_lock(&mutex);
-        enqueue(pclient);
+        thread_enqueue(pclient);
         pthread_cond_signal(&cv);
         pthread_mutex_unlock(&mutex);
 
@@ -81,9 +82,9 @@ void * thread_function(void *arg) {
         int *pclient;
 
         pthread_mutex_lock(&mutex);
-        if ((pclient = dequeue()) == NULL) {
+        if ((pclient = thread_dequeue()) == NULL) {
             pthread_cond_wait(&cv, &mutex);
-            pclient = dequeue();
+            pclient = thread_dequeue();
         }
         pthread_mutex_unlock(&mutex);
 
@@ -102,13 +103,15 @@ void * handle_connection(void *pclient) {
     int stat, len;
     free(pclient);
 
-    register_client(client_socket);
+    char uid[UID_LEN];
+    register_client(client_socket, uid);
 
     while (1) {
         // Receive command;
         recv_stat(client_socket, &stat);
         recv_len(client_socket, &len);
         char *cmd = malloc(len);
+        memset(cmd, 0, len);
         recv_msg(client_socket, cmd, len);
         if (cmd == NULL) {
             printf("connection lost\n");
@@ -116,6 +119,7 @@ void * handle_connection(void *pclient) {
         }
         printf("received command: %s\n", cmd);
 
+        // Handle list command --------------------------------------------- //
         if (strncmp(cmd, "list", len) == 0) {
             // Send the number of files.
             int num_files = get_num_files();
@@ -137,6 +141,37 @@ void * handle_connection(void *pclient) {
                 send_msg(client_socket, f->filename, MAX_FN_LEN);
                 files_sent++;
             }
+        }
+
+        // Handle download command ----------------------------------------- //
+        if (strncmp(cmd, "download", len) == 0) {
+            // Receive the filename from the client;
+            recv_stat(client_socket, &stat);
+            recv_len(client_socket, &len);
+            char *filename = malloc(len);
+            recv_msg(client_socket, filename, len);
+
+            // Get the file from the hash table and chose a host.
+            struct file_info *f = get_file_ht_entry(filename);
+            int r = rand() % f->num_hosts;
+            struct client_info *c = get_client_ht_entry(f->uids[r]);
+
+            send_stat(client_socket, OK);               //
+            send_len(client_socket, MAX_IP_LEN);        //
+            send_msg(client_socket, c->ip, MAX_IP_LEN); // --------------------- SEND E
+
+            send_stat(client_socket, OK);                    //
+            send_len(client_socket, MAX_PORT_LEN);           //
+            send_msg(client_socket, c->sport, MAX_PORT_LEN); // ---------------- SEND F
+            
+            // Now receive the status of the file.
+            recv_stat(client_socket, &stat);
+
+            // Add the client as a host of the file.
+            strncpy(f->uids[f->num_hosts], uid, UID_LEN);
+            f->num_hosts = f->num_hosts + 1;
+
+            print_file_ht();
         }
     }
 
@@ -167,7 +202,7 @@ void * handle_connection(void *pclient) {
  // ------------------------------------------------------------------------ //
  // register_client() function
  //
-void register_client(int client_socket) {
+void register_client(int client_socket, char *uid) {
     int stat;
     int len;
 
@@ -180,7 +215,7 @@ void register_client(int client_socket) {
     int ccp = ntohs(addr.sin_port);
     char client_cport[MAX_PORT_LEN];
     sprintf(client_cport, "%d", ccp);
-    char uid[UID_LEN]; 
+    //char uid[UID_LEN]; 
     client_to_uid(client_ip, client_cport, uid);
 
     printf("client uid: %s\n", uid);

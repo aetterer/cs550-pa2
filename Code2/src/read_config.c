@@ -19,7 +19,7 @@ void trim(char *str) {
 }
 
 // ------------------------------------------------------------------------- //
-void read_config(char *config, char *ip, char *port, char *wd) {
+void read_config(char *config, char *ip, char *port, char *wd, char *ld) {
     FILE *fp = fopen(config, "r");
     
     if (ip != NULL) {
@@ -33,6 +33,11 @@ void read_config(char *config, char *ip, char *port, char *wd) {
     if (wd != NULL) {
         fgets(wd, MAX_WD_LEN, fp);
         trim(wd);
+    }
+
+    if (ld != NULL) {
+        fgets(ld, MAX_WD_LEN, fp);
+        trim(ld);
     }
 
     fclose(fp);

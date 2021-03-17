@@ -1,8 +1,8 @@
-typedef struct node {
+typedef struct thread_node {
   int *client_socket;
-  struct node *next;
-} node_t;
+  struct thread_node *next;
+} thread_node_t;
 
-void enqueue(int *);
+void thread_enqueue(int *);
 
-int * dequeue();
+int * thread_dequeue();

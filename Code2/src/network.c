@@ -37,7 +37,7 @@ int init_server(char *port, int backlog) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    getaddrinfo(NULL, port, &hints, &info);
+    getaddrinfo("127.0.0.1", port, &hints, &info);
 
     listener_socket = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
     setsockopt(listener_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
