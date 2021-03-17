@@ -53,6 +53,7 @@ int main(int argc, char **argv) {
     if (fork() == 0) {
         int listener_socket, client_socket;
 
+        printf("Initializing server. Listening on port %s\n", port_str);
         listener_socket = init_server(port_str, 10);
        
 
@@ -60,29 +61,19 @@ int main(int argc, char **argv) {
             pthread_create(&thread_pool[i], NULL, thread_function, NULL);
         }
 
-        //printf("server: waiting for connection...\n");
         while (1) {
+            printf("Server: waiting for connection...\n");
             client_socket = accept(listener_socket, NULL, NULL);
-        
+    
             // Get the client's info.
-            //struct sockaddr_in addr;
-            //socklen_t addr_len = sizeof addr;
-            //getpeername(client_socket, (struct sockaddr *)&addr, &addr_len);
-            //char *client_ip = inet_ntoa(addr.sin_addr);
-            //int client_port = ntohs(addr.sin_port);
-            
-            //char *logmsg = NULL;
-            //sprintf(logmsg, "Server: Received connection from %s:%d", client_ip, client_port);
-            //write_to_log("Server: received connection.");
-            
-            //pthread_mutex_lock(&mutex);
-            //FILE *fp = fopen(logfile, "a");
-            //char l[100] = "Server: what the actually fuck\n";
-            //fprintf(fp, "Server: received connection\n");
-            //fwrite(l, 100, 1, fp);
-            //fclose(fp);
-            //pthread_mutex_unlock(&mutex);
+            struct sockaddr_in addr;
+            socklen_t addr_len = sizeof addr;
+            getpeername(client_socket, (struct sockaddr *)&addr, &addr_len);
+            char *client_ip = inet_ntoa(addr.sin_addr);
+            int client_port = ntohs(addr.sin_port);
 
+            printf("Received connection from %s:%d\n", client_ip, client_port);
+        
             int *pclient = malloc(sizeof (int));
             *pclient = client_socket;
 
@@ -190,6 +181,7 @@ int main(int argc, char **argv) {
             recv_msg(index_socket, host_port, len);
 
             // Then connect to that host.
+            printf("connecting to %s:%s\n", host_ip, host_port);
             int host_socket = init_client(host_ip, host_port);
 
             // Send the filename.
@@ -232,35 +224,6 @@ int main(int argc, char **argv) {
             close(index_socket);
             return 0;
         }
-
-        /*
-        // Send a filename to the indexing server.
-        send_stat(index_socket, OK);               //
-        send_len(index_socket, MAX_FN_LEN);        //
-        send_msg(index_socket, buf, MAX_FN_LEN);   // ------------------ SEND D
-
-        char *host_ip;
-        char *host_port;
-
-        recv_stat(index_socket, &stat);       //
-        recv_len(index_socket, &len);         //
-        host_ip = malloc(len);                //
-        recv_msg(index_socket, host_ip, len); // ----------------------- RECV E
-
-        recv_stat(index_socket, &stat);         //
-        recv_len(index_socket, &len);           //
-        host_port = malloc(len);                //
-        recv_msg(index_socket, host_port, len); // --------------------- RECV F
-
-        printf("%s is on %s (%s)\n", buf, host_ip, host_port);
-
-        int host_socket = init_client(host_ip, host_port);
-        char *msg = "hello host";
-        send_stat(host_socket, OK);
-        send_len(host_socket, strlen(msg));
-        send_msg(host_socket, msg, strlen(msg));
-        close(host_socket);
-        */
     }
     close(index_socket);
 

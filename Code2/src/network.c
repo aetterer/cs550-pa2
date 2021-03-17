@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -20,7 +21,9 @@ int init_client(char *ip, char *port) {
     getaddrinfo(ip, port, &hints, &info);
 
     server_socket = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
-    connect(server_socket, info->ai_addr, info->ai_addrlen);
+    if (connect(server_socket, info->ai_addr, info->ai_addrlen) == -1) {
+        perror("connect");
+    }
     freeaddrinfo(info);
 
     return server_socket;
@@ -37,14 +40,18 @@ int init_server(char *port, int backlog) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    getaddrinfo("127.0.0.1", port, &hints, &info);
+    getaddrinfo(NULL, port, &hints, &info);
 
     listener_socket = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
     setsockopt(listener_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
-    bind(listener_socket, info->ai_addr, info->ai_addrlen);
+    if (bind(listener_socket, info->ai_addr, info->ai_addrlen) == -1) {
+        perror("bind");
+    }
     freeaddrinfo(info);
 
-    listen(listener_socket, backlog);
+    if (listen(listener_socket, backlog) == -1) {
+        perror("listen");
+    }
 
     return listener_socket;
  }
