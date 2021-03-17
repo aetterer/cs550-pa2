@@ -14,14 +14,15 @@
 pthread_t thread_pool[MAX_CLIENTS];
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
-//char logfile[MAX_WD_LEN];
+char logfile[MAX_WD_LEN];
+char wd[MAX_WD_LEN];
 
 // FUNCTION PROTOTYPES ----------------------------------------------------- //
 void register_with_index(int, char *);
 void client_to_uid(char *, int, char *);
 void * thread_function(void *);
 void * handle_connection(void *);
-//void write_to_log(char *);
+void write_to_log(char *);
 
 // ------------------------------------------------------------------------- //
 // main() function
@@ -29,7 +30,6 @@ void * handle_connection(void *);
 int main(int argc, char **argv) {
     // Get parameters from config file.
     char port_str[MAX_PORT_LEN];
-    char wd[MAX_WD_LEN];
 
     if (argc != 4) {
         printf("%s\n", USAGE);
@@ -73,7 +73,15 @@ int main(int argc, char **argv) {
             
             //char *logmsg = NULL;
             //sprintf(logmsg, "Server: Received connection from %s:%d", client_ip, client_port);
-            //write_to_log(logmsg);
+            //write_to_log("Server: received connection.");
+            
+            pthread_mutex_lock(&mutex);
+            FILE *fp = fopen(logfile, "a");
+            char l[100] = "Server: what the actually fuck\n";
+            //fprintf(fp, "Server: received connection\n");
+            fwrite(l, 100, 1, fp);
+            fclose(fp);
+            pthread_mutex_unlock(&mutex);
 
             int *pclient = malloc(sizeof (int));
             *pclient = client_socket;
@@ -108,7 +116,8 @@ int main(int argc, char **argv) {
         printf("dequeued %s\n", cmd_1);
 
         if (strncmp(cmd_1, "list", MAX_CMD_LEN) != 0 &&
-            strncmp(cmd_1, "download", MAX_CMD_LEN) != 0) {
+            strncmp(cmd_1, "download", MAX_CMD_LEN) != 0 &&
+            strncmp(cmd_1, "quit", MAX_CMD_LEN) != 0) {
             continue;
         }
 
@@ -214,6 +223,16 @@ int main(int argc, char **argv) {
             free(host_ip);
             free(host_port);
 
+        }
+
+        // Handle quit command --------------------------------------------- //
+        if (strncmp(cmd_1, "quit", MAX_CMD_LEN) == 0) {
+            // Send the command.
+            send_stat(index_socket, OK);
+            send_len(index_socket, MAX_CMD_LEN);
+            send_msg(index_socket, cmd_1, MAX_CMD_LEN);
+            close(index_socket);
+            return 0;
         }
 
         /*
@@ -357,13 +376,13 @@ void * handle_connection(void *pclient) {
 }
 
 // ------------------------------------------------------------------------- //
-//void write_to_log(char *str) {
-//    chdir("../../");
-//    FILE *fp = fopen(logfile, "a");
-//    fprintf(fp, "%s\n", str);
-//    fclose(fp);
-//    chdir(wd);
-//}
+void write_to_log(char *str) {
+    //pthread_mutex_lock(&mutex);
+    //FILE *fp = fopen(logfile, "a");
+    //fprintf(stdout, "%s\n", str);
+    //fclose(fp);
+    //pthread_mutex_unlock(&mutex);
+}
 
 /*
 // ------------------------------------------------------------------------- //

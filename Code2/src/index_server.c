@@ -173,6 +173,12 @@ void * handle_connection(void *pclient) {
 
             print_file_ht();
         }
+
+        // Handle quit command --------------------------------------------- //
+        if (strncmp(cmd, "quit", len) == 0) {
+            // unregister
+            return NULL;
+        }
     }
 
     /*
