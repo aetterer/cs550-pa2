@@ -20,7 +20,10 @@ int init_client(char *ip, char *port) {
 
     getaddrinfo(ip, port, &hints, &info);
 
-    server_socket = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
+    if ((server_socket = 
+                socket(info->ai_family, info->ai_socktype, info->ai_protocol)) == -1) {
+        perror("init_client() socket");
+    }
     if (connect(server_socket, info->ai_addr, info->ai_addrlen) == -1) {
         perror("connect");
     }
@@ -42,7 +45,10 @@ int init_server(char *port, int backlog) {
 
     getaddrinfo(NULL, port, &hints, &info);
 
-    listener_socket = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
+    if ((listener_socket = 
+                socket(info->ai_family, info->ai_socktype, info->ai_protocol)) == -1) {
+        perror("init_server() socket");
+    }
     setsockopt(listener_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
     if (bind(listener_socket, info->ai_addr, info->ai_addrlen) == -1) {
         perror("bind");

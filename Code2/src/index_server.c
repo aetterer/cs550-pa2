@@ -13,6 +13,7 @@
 pthread_t thread_pool[MAX_PEER_NODES];
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
+char logfile[MAX_WD_LEN];
 
 // FUNCTION PROTOTYPES ----------------------------------------------------- //
 void * thread_function(void *);
@@ -32,7 +33,15 @@ int main(int argc, char **argv) {
     }
 
     // Get server parameters from config file.
-    read_config(argv[1], NULL, port, wd, NULL);
+    read_config(argv[1], NULL, port, wd, logfile);
+
+    // Clear out the log file.
+    //FILE *lp;
+    //if ((lp = fopen(logfile, "w")) == NULL) {
+    //    perror("fopen");
+    //} else {
+    //    fclose(lp);
+    //}
 
     // Set up list of clients
     init_client_ht();
@@ -47,7 +56,7 @@ int main(int argc, char **argv) {
         pthread_create(&thread_pool[i], NULL, thread_function, NULL);
     }
 
-    printf("waiting for connection...\n");
+    //printf("waiting for connection...\n");
 
     while (1) {
         // Accept a connection from a client.
@@ -106,6 +115,17 @@ void * handle_connection(void *pclient) {
     char uid[UID_LEN];
     register_client(client_socket, uid);
 
+    //FILE *lp;
+    //if ((lp = fopen(logfile, "a")) == NULL) {
+    //    perror("fopen");
+    //} else {
+    //    pthread_mutex_lock(&mutex);
+    //    //ftruncate(fileno(lp), 8192);
+    //    fprintf(lp, "Registered client %s\n", uid);
+    //    pthread_mutex_unlock(&mutex);
+    //    fclose(lp);
+    //}
+
     while (1) {
         // Receive command;
         recv_stat(client_socket, &stat);
@@ -114,13 +134,25 @@ void * handle_connection(void *pclient) {
         memset(cmd, 0, len);
         recv_msg(client_socket, cmd, len);
         if (cmd == NULL) {
-            printf("connection lost\n");
+            //printf("connection lost\n");
             return NULL;
         }
-        printf("received command: %s\n", cmd);
+
+        //FILE *lp;
 
         // Handle list command --------------------------------------------- //
         if (strncmp(cmd, "list", len) == 0) {
+            // Log command received.
+            //if ((lp = fopen(logfile, "a")) == NULL) {
+            //    perror("fopen");
+            //} else {
+            //    pthread_mutex_lock(&mutex);
+            //    //ftruncate(fileno(lp), 8192);
+            //    fprintf(lp, "Received `%s' command from %s\n", cmd, uid);
+            //    pthread_mutex_unlock(&mutex);
+            //    fclose(lp);
+            //}
+
             // Send the number of files.
             int num_files = get_num_files();
             char num_files_str[12];
@@ -141,6 +173,17 @@ void * handle_connection(void *pclient) {
                 send_msg(client_socket, f->filename, MAX_FN_LEN);
                 files_sent++;
             }
+
+            // Log what was sent.
+            //if ((lp = fopen(logfile, "a")) == NULL) {
+            //    perror("fopen");
+            //} else {
+            //    pthread_mutex_lock(&mutex);
+            //    //ftruncate(fileno(lp), 8192);
+            //    fprintf(lp, "Sent list of %d filenames to %s\n", num_files, uid);
+            //    pthread_mutex_unlock(&mutex);
+            //    fclose(lp);
+            //}
         }
 
         // Handle download command ----------------------------------------- //
@@ -150,6 +193,17 @@ void * handle_connection(void *pclient) {
             recv_len(client_socket, &len);
             char *filename = malloc(len);
             recv_msg(client_socket, filename, len);
+
+            // Log command received.
+            //if ((lp = fopen(logfile, "a")) == NULL) {
+            //    perror("fopen");
+            //} else {
+            //    pthread_mutex_lock(&mutex);
+            //    //ftruncate(fileno(lp), 8192);
+            //    fprintf(lp, "Received `%s  %s' command from %s\n", cmd, filename, uid);
+            //    pthread_mutex_unlock(&mutex);
+            //    fclose(lp);
+            //}
 
             // Get the file from the hash table and chose a host.
             struct file_info *f = get_file_ht_entry(filename);
@@ -163,6 +217,17 @@ void * handle_connection(void *pclient) {
             send_stat(client_socket, OK);                    //
             send_len(client_socket, MAX_PORT_LEN);           //
             send_msg(client_socket, c->sport, MAX_PORT_LEN); // ---------------- SEND F
+
+            // Log what was sent.
+            //if ((lp = fopen(logfile, "a")) == NULL) {
+            //    perror("fopen");
+            //} else {
+            //    pthread_mutex_lock(&mutex);
+            //    //ftruncate(fileno(lp), 8192);
+            //    fprintf(lp, "Sent host ip and port `%s:%s' to %s\n",c->ip, c->sport, uid);
+            //    pthread_mutex_unlock(&mutex);
+            //    fclose(lp);
+            //}
             
             // Now receive the status of the file.
             recv_stat(client_socket, &stat);
@@ -176,6 +241,15 @@ void * handle_connection(void *pclient) {
 
         // Handle quit command --------------------------------------------- //
         if (strncmp(cmd, "quit", len) == 0) {
+            //if ((lp = fopen(logfile, "a")) == NULL) {
+            //    perror("fopen");
+            //} else {
+            //    pthread_mutex_lock(&mutex);
+            //    //ftruncate(fileno(lp), 8192);
+            //    fprintf(lp, "Unregistered client %s\n", uid);
+            //    pthread_mutex_unlock(&mutex);
+            //    fclose(lp);
+            //}
             // unregister
             return NULL;
         }
@@ -224,14 +298,14 @@ void register_client(int client_socket, char *uid) {
     //char uid[UID_LEN]; 
     client_to_uid(client_ip, client_cport, uid);
 
-    printf("client uid: %s\n", uid);
+    //printf("client uid: %s\n", uid);
 
     // Then, receive the port the client will be listening on as a server.
     recv_stat(client_socket, &stat);              //
     recv_len(client_socket, &len);                //
     char *client_sport = malloc(len);             //
     recv_msg(client_socket, client_sport, len);   // ------------------- RECV A
-    printf("received message: %s\n", client_sport);
+    //printf("received message: %s\n", client_sport);
 
     // Now create the client_info entry for the hash table and fill in the uid,
     // ip, cport, and sport fields.

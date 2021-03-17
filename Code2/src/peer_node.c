@@ -23,6 +23,7 @@ void client_to_uid(char *, int, char *);
 void * thread_function(void *);
 void * handle_connection(void *);
 void write_to_log(char *);
+void recv_list_files(int);
 
 // ------------------------------------------------------------------------- //
 // main() function
@@ -30,15 +31,22 @@ void write_to_log(char *);
 int main(int argc, char **argv) {
     // Get parameters from config file.
     char port_str[MAX_PORT_LEN];
+    pid_t pid;
 
     if (argc != 4) {
         printf("%s\n", USAGE);
         exit(1);
     }
 
-    read_config(argv[1], NULL, port_str, wd, NULL);
+    read_config(argv[1], NULL, port_str, wd, logfile);
     //printf("log file: %s\n", logfile);
 
+    // Clear out the log file.
+    FILE *lp;
+    if ((lp = fopen(logfile, "w")) == NULL) {
+        perror("fopen");
+    }
+    fclose(lp);
 
     // Change the directory.
     chdir(wd);
@@ -50,10 +58,10 @@ int main(int argc, char **argv) {
     register_with_index(index_socket, port_str);
 
     // SERVER SECTION ------------------------------------------------------ //
-    if (fork() == 0) {
+    if ((pid = fork()) == 0) {
         int listener_socket, client_socket;
 
-        printf("Initializing server. Listening on port %s\n", port_str);
+        //printf("Initializing server. Listening on port %s\n", port_str);
         listener_socket = init_server(port_str, 10);
        
 
@@ -62,17 +70,17 @@ int main(int argc, char **argv) {
         }
 
         while (1) {
-            printf("Server: waiting for connection...\n");
+            //printf("Server: waiting for connection...\n");
             client_socket = accept(listener_socket, NULL, NULL);
     
             // Get the client's info.
-            struct sockaddr_in addr;
-            socklen_t addr_len = sizeof addr;
-            getpeername(client_socket, (struct sockaddr *)&addr, &addr_len);
-            char *client_ip = inet_ntoa(addr.sin_addr);
-            int client_port = ntohs(addr.sin_port);
+            //struct sockaddr_in addr;
+            //socklen_t addr_len = sizeof addr;
+            //getpeername(client_socket, (struct sockaddr *)&addr, &addr_len);
+            //char *client_ip = inet_ntoa(addr.sin_addr);
+            //int client_port = ntohs(addr.sin_port);
 
-            printf("Received connection from %s:%d\n", client_ip, client_port);
+            //printf("Received connection from %s:%d\n", client_ip, client_port);
         
             int *pclient = malloc(sizeof (int));
             *pclient = client_socket;
@@ -94,6 +102,7 @@ int main(int argc, char **argv) {
         // Get user input.
         printf("> ");
         fgets(full_cmd, MAX_CMD_LEN, stdin);
+        if (full_cmd[0] == '\0') return 1;
         if (full_cmd[0] == '\n') continue;
         trimnl(full_cmd);
 
@@ -110,10 +119,8 @@ int main(int argc, char **argv) {
             continue;
         }
 
-
         // handle list command --------------------------------------------- //
         if (strncmp(cmd_1, "list", MAX_CMD_LEN) == 0) {
-            printf("FILE LIST\n============\n");
             // Start the timer.
             exec_time = 0;
             gettimeofday(&start, NULL);
@@ -132,6 +139,7 @@ int main(int argc, char **argv) {
             free(num_files_str);
 
             // Then receive each filename.
+            printf("FILE LIST\n============\n");
             for (int i = 0; i < num_files; i++) {
                 recv_stat(index_socket, &stat);
                 recv_len(index_socket, &len);
@@ -140,13 +148,23 @@ int main(int argc, char **argv) {
                 printf("%s\n", filename);
                 free(filename);
             }
+            printf("============\n");
 
             // Stop the timer an calculate the request time.
             gettimeofday(&end, NULL);
             exec_time = (double) (end.tv_sec - start.tv_sec) 
-                + (double) (end.tv_usec - start.tv_usec) / 1000;
-            printf("============\n");
-            printf("%lf ms\n", exec_time);
+                + (double) (end.tv_usec - start.tv_usec) / 1000000;
+
+            // Log the time.
+            chdir("../../");
+            FILE *fp;
+            if ((fp = fopen(logfile, "a")) == NULL) {
+                perror("fopen");
+            } else {
+                fprintf(fp, "Client: received file list - %lf ms\n", exec_time);
+                fclose(fp);
+            }
+            chdir(wd);
         }
 
         // handle download command ----------------------------------------- //
@@ -206,8 +224,21 @@ int main(int argc, char **argv) {
             // Stop the timer an calculate the request time.
             gettimeofday(&end, NULL);
             exec_time = (double) (end.tv_sec - start.tv_sec) 
-                + (double) (end.tv_usec - start.tv_usec) / 1000;
-            printf("%lf ms\n", exec_time);
+                + (double) (end.tv_usec - start.tv_usec) / 1000000;
+
+            
+            printf("Client: Sucessfully downloaded %s\n", filename);
+
+            // Log the time.
+            chdir("../../");
+            FILE *lp;
+            if ((lp = fopen(logfile, "a")) == NULL) {
+                perror("fopen");
+            } else {
+                fprintf(lp, "Client: received file %s - %lf ms\n", filename, exec_time);
+                fclose(lp);
+            }
+            chdir(wd);
 
             free(f_buf);
             free(host_ip);
@@ -217,11 +248,13 @@ int main(int argc, char **argv) {
 
         // Handle quit command --------------------------------------------- //
         if (strncmp(cmd_1, "quit", MAX_CMD_LEN) == 0) {
-            // Send the command.
+            // Let the indexing server know we are quiting, then kill the
+            // the server process of this program.
             send_stat(index_socket, OK);
             send_len(index_socket, MAX_CMD_LEN);
             send_msg(index_socket, cmd_1, MAX_CMD_LEN);
             close(index_socket);
+            kill(pid, SIGKILL);
             return 0;
         }
     }
@@ -337,11 +370,15 @@ void * handle_connection(void *pclient) {
 
 // ------------------------------------------------------------------------- //
 void write_to_log(char *str) {
-    //pthread_mutex_lock(&mutex);
-    //FILE *fp = fopen(logfile, "a");
-    //fprintf(stdout, "%s\n", str);
-    //fclose(fp);
-    //pthread_mutex_unlock(&mutex);
+    pthread_mutex_lock(&mutex);
+    FILE *fp = fopen(logfile, "a");
+    fprintf(stdout, "%s\n", str);
+    fclose(fp);
+    pthread_mutex_unlock(&mutex);
+}
+
+void recv_list_files(int index_socket) {
+
 }
 
 /*
