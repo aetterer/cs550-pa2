@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <unistd.h>
+#include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -19,15 +21,31 @@ int init_client(char *ip, char *port) {
 
     getaddrinfo(ip, port, &hints, &info);
 
-    server_socket = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
-    connect(server_socket, info->ai_addr, info->ai_addrlen);
+    if ((server_socket = 
+                socket(info->ai_family, info->ai_socktype, info->ai_protocol)) == -1) {
+        fprintf(stderr, "\033[0;31m");
+        fprintf(stderr, "Could not create socket for %s:%s: %s\n", ip, port, strerror(errno));
+        fprintf(stderr, "\033[0m");
+        freeaddrinfo(info);
+        return -1;
+    }
+
+
+    if (connect(server_socket, info->ai_addr, info->ai_addrlen) == -1) {
+        fprintf(stderr, "\033[0;31m");
+        fprintf(stderr, "Could not connect to %s:%s: %s\n", ip, port, strerror(errno));
+        fprintf(stderr, "\033[0m");
+        freeaddrinfo(info);
+        return -1;
+    }
+
     freeaddrinfo(info);
 
     return server_socket;
 }
 
 // ------------------------------------------------------------------------- //
-int init_server(char *port, int backlog) {
+int init_server(char *port) {
     struct addrinfo hints, *info;
     int listener_socket;
     int yes = 1;
@@ -39,12 +57,19 @@ int init_server(char *port, int backlog) {
 
     getaddrinfo(NULL, port, &hints, &info);
 
-    listener_socket = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
+    if ((listener_socket = 
+                socket(info->ai_family, info->ai_socktype, info->ai_protocol)) == -1) {
+        perror("init_server() socket");
+    }
     setsockopt(listener_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
-    bind(listener_socket, info->ai_addr, info->ai_addrlen);
+    if (bind(listener_socket, info->ai_addr, info->ai_addrlen) == -1) {
+        perror("bind");
+    }
     freeaddrinfo(info);
 
-    listen(listener_socket, backlog);
+    if (listen(listener_socket, 50) == -1) {
+        perror("listen");
+    }
 
     return listener_socket;
  }
@@ -79,6 +104,27 @@ int send_all(int socket, char *buf, int len) {
 
     //len = total;
     return n == -1?-1:0;
+}
+
+int send_stat(int socket, int stat) {
+    stat = htonl(stat);
+    char stat_as_bytes[MSG_STAT_LEN];
+    memcpy(stat_as_bytes, (char *)&stat, MSG_STAT_LEN);
+    int ret = send_all(socket, stat_as_bytes, MSG_STAT_LEN);
+    return ret;
+}
+
+int send_len(int socket, int len) {
+    len = htonl(len);
+    char len_as_bytes[MSG_LEN_LEN];
+    memcpy(len_as_bytes, (char *)&len, MSG_LEN_LEN);
+    int ret = send_all(socket, len_as_bytes, MSG_LEN_LEN);
+    return ret;
+}
+
+int send_msg(int socket, char *msg, int len) {
+    int ret = send_all(socket, msg, len);
+    return ret;
 }
 
 // ------------------------------------------------------------------------- //
@@ -120,15 +166,41 @@ int recv_all(int socket, char *buf, int len) {
     return n == -1?-1:0;
 }
 
+int recv_stat(int socket, int *stat) {
+    char stat_as_bytes[MSG_STAT_LEN];
+    int ret = recv_all(socket, stat_as_bytes, MSG_STAT_LEN);
+    int s;
+    memcpy(&s, (int *)stat_as_bytes, MSG_STAT_LEN);
+    s = ntohl(s);
+    *stat = s;
+    return ret;
+}
+
+int recv_len(int socket, int *len) {
+    char len_as_bytes[MSG_LEN_LEN];
+    int ret = recv_all(socket, len_as_bytes, MSG_LEN_LEN);
+    int l;
+    memcpy(&l, (int *)len_as_bytes, MSG_LEN_LEN);
+    l = ntohl(l);
+    *len = l;
+    return ret;
+}
+
+int recv_msg(int socket, char *msg, int len) {
+    int ret = recv_all(socket, msg, len);
+    return ret;
+}
+
 // ------------------------------------------------------------------------- //
-char * recv_packet(int socket) {
+char * recv_packet(int socket, int *stat) {
     //printf("\t### recv_packet() debug ###\n");
     // First, handle the status.
     char stat_as_bytes[MSG_STAT_LEN];
     recv_all(socket, stat_as_bytes, MSG_STAT_LEN);
-    int stat;
-    memcpy(&stat, (int *)stat_as_bytes, MSG_STAT_LEN);
-    stat = ntohl(stat);
+    int s;
+    memcpy(&s, (int *)stat_as_bytes, MSG_STAT_LEN);
+    s = ntohl(s);
+    *stat = s;
     //printf("\tmsg stat: %d\n", stat);
 
     // Then handle the length of the message.
@@ -154,7 +226,8 @@ void trimnl(char *s) {
     while (s[i] != '\n') {
         i++;
     }
-    s[i] = '\0';
+    if (s[i] == '\n')
+        s[i] = '\0';
 }
 
 

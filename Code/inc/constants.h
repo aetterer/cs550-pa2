@@ -2,6 +2,7 @@
 #define CONSTANTS_H
 
 #define MAX_PEER_NODES 10
+#define MAX_CMD_LEN 256
 #define MAX_IP_LEN 24
 #define MAX_PORT_LEN 24
 #define MAX_WD_LEN 24
